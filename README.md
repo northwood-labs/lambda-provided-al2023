@@ -10,7 +10,11 @@ The `provided.al2023` environment is the one intended for compiled code (C, C++,
 
 ## Usage
 
-TBD
+Container image path:
+
+```text
+ghcr.io/northwood-labs/lambda-provided-al2023:latest
+```
 
 ## Issues
 
