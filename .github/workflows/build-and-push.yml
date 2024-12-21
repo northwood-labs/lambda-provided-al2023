@@ -3,6 +3,13 @@ name: Build and push
 
 on:
   workflow_dispatch:
+  schedule:
+      # https://crontab.guru/#41_9_*_*_6
+    - cron: "41 9 * * 6"
+
+permissions:
+  contents: read
+  packages: write
 
 # Variables available to all jobs defined in this file
 env:
