@@ -1,0 +1,101 @@
+# https://web.archive.org/web/20240917152738/https://andrewlock.net/combining-multiple-docker-images-into-a-multi-arch-image/
+name: Build and push
+
+on:
+  workflow_dispatch:
+
+# Variables available to all jobs defined in this file
+env:
+  DOCKER_BUILDKIT: 1
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build_intel64:
+    strategy:
+      fail-fast: true
+    name: Build Intel64
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Create Buildx driver
+        run: |
+          docker buildx use multiplatform || docker buildx create --name multiplatform --use 2>/dev/null
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      - name: Clone AWS Lambda repo
+        run: |
+          git clone https://github.com/aws/aws-lambda-base-images.git --branch provided.al2023 --single-branch __aws__
+
+      - name: Build
+        run: |
+          set -euxo pipefail
+          cd __aws__/x86_64/ && \
+            output="$(
+              docker buildx build \
+                -t ghcr.io/northwood-labs/lambda-provided-al2023 \
+                -f Dockerfile.provided.al2023 \
+                --platform linux/amd64 \
+                --output push-by-digest=true,type=image,push=true \
+                . 2>&1
+            )"
+
+            echo "INTEL64_HASH=$(echo "$output" | grep "exporting manifest list" | awk '{print $5}')" >> $GITHUB_ENV
+
+  build_arm64:
+    strategy:
+      fail-fast: true
+    name: Build ARM64
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Create Buildx driver
+        run: |
+          docker buildx use multiplatform || docker buildx create --name multiplatform --use 2>/dev/null
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      - name: Clone AWS Lambda repo
+        run: |
+          git clone https://github.com/aws/aws-lambda-base-images.git --branch provided.al2023 --single-branch __aws__
+
+      - name: Build
+        run: |
+          set -euxo pipefail
+          cd __aws__/arm64/ && \
+            output="$(
+              docker buildx build \
+                -t ghcr.io/northwood-labs/lambda-provided-al2023 \
+                -f Dockerfile.provided.al2023 \
+                --platform linux/arm64 \
+                --output push-by-digest=true,type=image,push=true \
+                . 2>&1
+            )"
+
+            echo "ARM64_HASH=$(echo "$output" | grep "exporting manifest list" | awk '{print $5}')" >> $GITHUB_ENV
+
+  merge:
+    needs: [build_intel64, build_arm64]
+    strategy:
+      fail-fast: true
+    name: Merge into multiplatform
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Create Buildx driver
+        run: |
+          docker buildx use multiplatform || docker buildx create --name multiplatform --use 2>/dev/null
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+      - name: Merge
+        run: |
+          set -euxo pipefail
+          docker buildx imagetools create \
+            -t ghcr.io/northwood-labs/lambda-provided-al2023:latest \
+              ghcr.io/northwood-labs/lambda-provided-al2023@${{ env.INTEL64_HASH }} \
+              ghcr.io/northwood-labs/lambda-provided-al2023@${{ env.ARM64_HASH }} \
+              ;
