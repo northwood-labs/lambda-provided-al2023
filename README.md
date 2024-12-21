@@ -18,6 +18,8 @@ If you have an issue with this multi-platform Docker image, **DO NOT FILE AN ISS
 
 ## Source
 
+The Docker image is re-generated with AWS’ latest changes weekly on Saturday at 9:41am UTC.
+
 <https://github.com/aws/aws-lambda-base-images/tree/provided.al2023>
 
 ### Doesn't AWS already provide these?
