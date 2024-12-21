@@ -2,7 +2,7 @@
 
 This repository auto-builds a multi-platform (`x86_64`/`ARM64`) Docker image for the `provided.al2023` AWS Lambda environment.
 
-The `provided.al2023` environment is the one intended for compiled code (C, C++, Rust, Go, etc.), or to use Lambda Layers to modify.
+The `provided.al2023` environment is the one intended for compiled code (C, C++, Rust, Go, etc.), or to use [Lambda Layers](https://docs.aws.amazon.com/lambda/latest/dg/chapter-layers.html) to modify.
 
 ## Usage
 
